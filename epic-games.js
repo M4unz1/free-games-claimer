@@ -190,6 +190,7 @@ try {
       title = await page.locator('h1').first().innerText();
     }
     const game_id = page.url().split('/').pop();
+    const existedInDb = db.data[user][game_id];
     db.data[user][game_id] ||= { title, time: datetime(), url: page.url() }; // this will be set on the initial run only!
     console.log('Current free game:', title);
     if (bundle_includes) console.log('  This bundle includes:', bundle_includes);
@@ -198,6 +199,7 @@ try {
 
     if (btnText == 'in library') {
       console.log('  Already in library! Nothing to claim.');
+      if (!existedInDb) await notify(`Game already in library: ${url}`);
       notify_game.status = 'existed';
       db.data[user][game_id].status ||= 'existed'; // does not overwrite claimed or failed
       if (db.data[user][game_id].status.startsWith('failed')) db.data[user][game_id].status = 'manual'; // was failed but now it's claimed
@@ -271,7 +273,9 @@ try {
         captcha.waitFor().then(async () => { // don't await, since element may not be shown
           // console.info('  Got hcaptcha challenge! NopeCHA extension will likely solve it.')
           console.error('  Got hcaptcha challenge! Lost trust due to too many login attempts? You can solve the captcha in the browser or get a new IP address.');
-          await notify(`epic-games: got captcha challenge right before claim of <a href="${url}">${title}</a>. Use VNC to solve it manually.`); // TODO could even create purchase URL, see https://github.com/vogler/free-games-claimer/pull/130
+          // await notify(`epic-games: got captcha challenge right before claim of <a href="${url}">${title}</a>. Use VNC to solve it manually.`); // TODO not all apprise services understand HTML: https://github.com/vogler/free-games-claimer/pull/417
+          await notify(`epic-games: got captcha challenge for.\nGame link: ${url}`);
+          // TODO could even create purchase URL, see https://github.com/vogler/free-games-claimer/pull/130
           // await page.waitForTimeout(2000);
           // const p = path.resolve(cfg.dir.screenshots, 'epic-games', 'captcha', `${filenamify(datetime())}.png`);
           // await captcha.screenshot({ path: p });
